@@ -139,6 +139,7 @@ func Sync(ctx context.Context, tmc *TendermintClient, st *Store) (uint, error) {
 			MissingIDs:     missingIDs,
 			Messages:       messages,
 			FeeFrac:        feeFrac,
+			Transactions: transactions,
 		}
 		if err := st.InsertBlock(ctx, block); err != nil {
 			return inserted, errors.Wrapf(err, "insert block %d", c.Height)
