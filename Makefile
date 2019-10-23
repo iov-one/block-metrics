@@ -18,5 +18,5 @@ heroku: $(DOCKER_CMD)
 tf: 
 	go test -short ./...
 
-run-metrics: 
+run: 
 	go run cmd/collector/main.go
