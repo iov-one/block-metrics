@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/iov-one/blocks-metrics/pkg/errors"
+	"github.com/iov-one/blocks-metrics/pkg/models"
 	_ "github.com/lib/pq"
 )
 
@@ -31,7 +32,7 @@ func TestLastBlock(t *testing.T) {
 	}
 
 	for i := 5; i < 100; i += 20 {
-		block := Block{
+		block := models.Block{
 			Height: int64(i),
 			Hash:   []byte{0, 1, byte(i)},
 			// Postgres TIMESTAMPTZ precision is microseconds.
@@ -92,7 +93,7 @@ func TestStoreInsertBlock(t *testing.T) {
 	}
 	cases := map[string]struct {
 		validators []validator
-		block      Block
+		block      models.Block
 		wantErr    *errors.Error
 	}{
 		"success": {
@@ -101,7 +102,7 @@ func TestStoreInsertBlock(t *testing.T) {
 				{address: []byte{0x02}, pubkey: []byte{0x02, 0, 0x02}},
 				{address: []byte{0x03}, pubkey: []byte{0x03, 0, 0x03}},
 			},
-			block: Block{
+			block: models.Block{
 				Height:         1,
 				Hash:           []byte{0, 1, 2, 3},
 				Time:           time.Now().UTC().Round(time.Millisecond),
@@ -116,7 +117,7 @@ func TestStoreInsertBlock(t *testing.T) {
 				{address: []byte{0x02}, pubkey: []byte{0x02, 0, 0x02}},
 				{address: []byte{0x03}, pubkey: []byte{0x03, 0, 0x03}},
 			},
-			block: Block{
+			block: models.Block{
 				Height:         2,
 				Hash:           []byte{0, 1, 2, 3},
 				Time:           time.Now().UTC().Round(time.Millisecond),
@@ -130,7 +131,7 @@ func TestStoreInsertBlock(t *testing.T) {
 			validators: []validator{
 				{address: []byte{0x01}, pubkey: []byte{0x01, 0, 0x01}},
 			},
-			block: Block{
+			block: models.Block{
 				Height:         1,
 				Hash:           []byte{0, 1, 2, 3},
 				Time:           time.Now().UTC().Round(time.Millisecond),
@@ -146,7 +147,7 @@ func TestStoreInsertBlock(t *testing.T) {
 				{address: []byte{0x02}, pubkey: []byte{0x02, 0, 0x02}},
 				{address: []byte{0x03}, pubkey: []byte{0x03, 0, 0x03}},
 			},
-			block: Block{
+			block: models.Block{
 				Height:         1,
 				Hash:           []byte{0, 1, 2, 3},
 				Time:           time.Now().UTC().Round(time.Millisecond),

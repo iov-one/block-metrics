@@ -3,9 +3,9 @@ package metrics
 import (
 	"context"
 	"database/sql"
-	"time"
 
 	"github.com/iov-one/blocks-metrics/pkg/errors"
+	"github.com/iov-one/blocks-metrics/pkg/models"
 	"github.com/lib/pq"
 )
 
@@ -43,7 +43,7 @@ func (s *Store) ValidatorAddressID(ctx context.Context, address []byte) (int64, 
 	return id, castPgErr(err)
 }
 
-func (s *Store) InsertBlock(ctx context.Context, b Block) error {
+func (s *Store) InsertBlock(ctx context.Context, b models.Block) error {
 	if len(b.ParticipantIDs) == 0 {
 		return errors.Wrap(ErrConflict, "no participants on block")
 	}
@@ -98,8 +98,8 @@ func (s *Store) InsertBlock(ctx context.Context, b Block) error {
 // LatestBlock returns the block with the greatest high value. This method
 // returns ErrNotFound if no block exist.
 // Note that it doesn't load the validators by default
-func (s *Store) LatestBlock(ctx context.Context) (*Block, error) {
-	var b Block
+func (s *Store) LatestBlock(ctx context.Context) (*models.Block, error) {
+	var b models.Block
 
 	err := s.db.QueryRowContext(ctx, `
 		SELECT block_height, block_hash, block_time, proposer_id, messages, fee_frac
@@ -127,8 +127,8 @@ func (s *Store) LatestBlock(ctx context.Context) (*Block, error) {
 // Note that it doesn't load the validators by default
 //
 // TODO: de-duplicate LatestBlock() code
-func (s *Store) LoadBlock(ctx context.Context, blockHeight int64) (*Block, error) {
-	var b Block
+func (s *Store) LoadBlock(ctx context.Context, blockHeight int64) (*models.Block, error) {
+	var b models.Block
 
 	err := s.db.QueryRowContext(ctx, `
 		SELECT block_height, block_hash, block_time, proposer_id, messages, fee_frac
@@ -180,23 +180,6 @@ func (s *Store) loadParticipants(ctx context.Context, blockHeight int64) (partic
 
 	err = wrapPgErr(rows.Err(), "scanning participants")
 	return
-}
-
-type Block struct {
-	Height         int64
-	Hash           []byte
-	Time           time.Time
-	ProposerID     int64
-	ParticipantIDs []int64
-	MissingIDs     []int64
-	Messages       []string
-	FeeFrac        uint64
-	Transactions   []Transaction
-}
-
-type Transaction struct {
-	Hash    []byte
-	Message string
 }
 
 var (

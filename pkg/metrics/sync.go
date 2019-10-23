@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/iov-one/blocks-metrics/pkg/errors"
+	"github.com/iov-one/blocks-metrics/pkg/models"
 	"github.com/iov-one/weave"
 	"github.com/iov-one/weave/coin"
 	"github.com/iov-one/weave/x/batch"
@@ -102,7 +103,7 @@ func Sync(ctx context.Context, tmc *TendermintClient, st *Store) (uint, error) {
 
 		var feeFrac uint64
 		messages := make([]string, 0) // Avoid nil array
-		transactions := make([]Transaction, 0, len(tmblock.Transactions))
+		transactions := make([]models.Transaction, 0, len(tmblock.Transactions))
 		for k, tx := range tmblock.Transactions {
 			if info := tx.GetFees(); info != nil {
 				if info.Fees.Ticker != "IOV" {
@@ -124,13 +125,13 @@ func Sync(ctx context.Context, tmc *TendermintClient, st *Store) (uint, error) {
 				return inserted, errors.Wrap(err, "cannot get transaction message detail")
 			}
 
-			transactions = append(transactions, Transaction{
+			transactions = append(transactions, models.Transaction{
 				Hash:    tmblock.TransactionHashes[k][:],
 				Message: msgDetails,
 			})
 		}
 
-		block := Block{
+		block := models.Block{
 			Height:         c.Height,
 			Hash:           c.Hash,
 			Time:           c.Time.UTC(),
