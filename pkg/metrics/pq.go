@@ -4,8 +4,8 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/iov-one/blocks-metrics/pkg/errors"
-	"github.com/iov-one/blocks-metrics/pkg/models"
+	"github.com/iov-one/block-metrics/pkg/errors"
+	"github.com/iov-one/block-metrics/pkg/models"
 	"github.com/lib/pq"
 )
 

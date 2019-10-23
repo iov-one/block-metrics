@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/iov-one/blocks-metrics/pkg/errors"
-	"github.com/iov-one/blocks-metrics/pkg/metrics"
+	"github.com/iov-one/block-metrics/pkg/errors"
+	"github.com/iov-one/block-metrics/pkg/metrics"
 )
 
 func main() {
