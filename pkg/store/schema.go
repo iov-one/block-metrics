@@ -1,4 +1,4 @@
-package metrics
+package store
 
 import (
 	"database/sql"
@@ -11,7 +11,6 @@ func EnsureSchema(pg *sql.DB) error {
 	if err != nil {
 		return fmt.Errorf("transaction begin: %s", err)
 	}
-	defer tx.Rollback()
 
 	for _, query := range strings.Split(schema, "\n---\n") {
 		query = strings.TrimSpace(query)
@@ -24,6 +23,9 @@ func EnsureSchema(pg *sql.DB) error {
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("transaction commit: %s", err)
 	}
+
+	_ = tx.Rollback()
+
 	return nil
 }
 
@@ -33,6 +35,7 @@ CREATE TABLE IF NOT EXISTS validators (
 	id SERIAL PRIMARY KEY,
 	public_key BYTEA NOT NULL UNIQUE,
 	address BYTEA NOT NULL UNIQUE,
+	name TEXT,
 	memo TEXT
 );
 
@@ -40,7 +43,7 @@ CREATE TABLE IF NOT EXISTS validators (
 
 CREATE TABLE IF NOT EXISTS blocks (
 	block_height BIGINT NOT NULL PRIMARY KEY,
-	block_hash BYTEA NOT NULL,
+	block_hash TEXT NOT NULL UNIQUE,
 	block_time TIMESTAMPTZ NOT NULL,
 	proposer_id INT NOT NULL REFERENCES validators(id),
 	messages TEXT[] NOT NULL,
@@ -61,9 +64,9 @@ CREATE TABLE IF NOT EXISTS block_participations (
 
 CREATE TABLE IF NOT EXISTS transactions (
 	id BIGSERIAL PRIMARY KEY,
-	transaction_hash BYTEA NOT NULL,
+	transaction_hash TEXT NOT NULL UNIQUE,
 	block_id BIGINT NOT NULL REFERENCES blocks(block_height),
-	message TEXT 
+	message JSONB
 );
 
 CREATE INDEX ON transactions (transaction_hash);

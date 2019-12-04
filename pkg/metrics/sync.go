@@ -3,13 +3,17 @@ package metrics
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"time"
 
-	"github.com/iov-one/block-metrics/pkg/errors"
+	"github.com/iov-one/block-metrics/pkg/models"
+	"github.com/iov-one/block-metrics/pkg/store"
 	"github.com/iov-one/weave"
 	"github.com/iov-one/weave/coin"
+	"github.com/iov-one/weave/errors"
 	"github.com/iov-one/weave/x/batch"
+	"github.com/iov-one/weave/x/cash"
 )
 
 const syncRetryTimeout = 3 * time.Second
@@ -17,7 +21,7 @@ const syncRetryTimeout = 3 * time.Second
 // Sync uploads to local store all blocks that are not present yet, starting
 // with the blocks with the lowest hight first. It always returns the number of
 // blocks inserted, even if returning an error.
-func Sync(ctx context.Context, tmc *TendermintClient, st *Store) (uint, error) {
+func Sync(ctx context.Context, tmc *TendermintClient, st *store.Store, hrp string) (uint, error) {
 	var (
 		inserted        uint
 		syncedHeight    int64
@@ -25,7 +29,7 @@ func Sync(ctx context.Context, tmc *TendermintClient, st *Store) (uint, error) {
 	)
 
 	switch block, err := st.LatestBlock(ctx); {
-	case ErrNotFound.Is(err):
+	case errors.ErrNotFound.Is(err):
 		syncedHeight = 0
 	case err == nil:
 		syncedHeight = block.Height
@@ -102,7 +106,7 @@ func Sync(ctx context.Context, tmc *TendermintClient, st *Store) (uint, error) {
 
 		var feeFrac uint64
 		messages := make([]string, 0) // Avoid nil array
-		transactions := make([]Transaction, 0, len(tmblock.Transactions))
+		transactions := make([]models.Transaction, 0, len(tmblock.Transactions))
 		for k, tx := range tmblock.Transactions {
 			if info := tx.GetFees(); info != nil {
 				if info.Fees.Ticker != "IOV" {
@@ -119,27 +123,27 @@ func Sync(ctx context.Context, tmc *TendermintClient, st *Store) (uint, error) {
 				return inserted, errors.Wrap(err, "cannot get transaction message")
 			}
 			messages = append(messages, msg.Path())
-			msgDetails, err := messageDetails(msg)
+			msgDetails, err := messageDetails(msg, hrp, tx.Multisig)
 			if err != nil {
 				return inserted, errors.Wrap(err, "cannot get transaction message detail")
 			}
 
-			transactions = append(transactions, Transaction{
-				Hash:    tmblock.TransactionHashes[k][:],
-				Message: msgDetails,
+			transactions = append(transactions, models.Transaction{
+				Hash:    hex.EncodeToString(tmblock.TransactionHashes[k][:]),
+				Message: json.RawMessage(msgDetails),
 			})
 		}
 
-		block := Block{
+		block := models.Block{
 			Height:         c.Height,
-			Hash:           c.Hash,
+			Hash:           hex.EncodeToString(c.Hash),
 			Time:           c.Time.UTC(),
 			ProposerID:     propID,
 			ParticipantIDs: participantIDs,
 			MissingIDs:     missingIDs,
 			Messages:       messages,
 			FeeFrac:        feeFrac,
-			Transactions: transactions,
+			Transactions:   transactions,
 		}
 		if err := st.InsertBlock(ctx, block); err != nil {
 			return inserted, errors.Wrapf(err, "insert block %d", c.Height)
@@ -148,12 +152,12 @@ func Sync(ctx context.Context, tmc *TendermintClient, st *Store) (uint, error) {
 	}
 }
 
-type Message struct {
-	Path    string `json:"path"`
-	Details string `json:"details"`
-}
+func messageDetails(msg weave.Msg, hrp string, multisigs [][]byte) (string, error) {
+	var multisigstr []string
+	for _, m := range multisigs {
+		multisigstr = append(multisigstr, hex.EncodeToString(m))
+	}
 
-func messageDetails(msg weave.Msg) (string, error) {
 	switch message := msg.(type) {
 	case batch.Msg:
 		list, err := message.MsgList()
@@ -161,20 +165,48 @@ func messageDetails(msg weave.Msg) (string, error) {
 			return "", err
 		}
 
-		messages := make([]Message, len(list))
+		messages := make([]models.Message, len(list))
 
 		for k, v := range list {
 			details, err := json.Marshal(v)
 			if err != nil {
 				return "", err
 			}
-			messages[k] = Message{
-				Path:    v.Path(),
-				Details: string(details),
+			messages[k] = models.Message{
+				Path:      v.Path(),
+				Details:   json.RawMessage(details),
+				Multisigs: multisigstr,
 			}
 		}
 
 		res, err := json.Marshal(messages)
+		return string(res), err
+	case *cash.SendMsg:
+		source, err := message.Source.Bech32String(hrp)
+		if err != nil {
+			return "", nil
+		}
+		dest, err := message.Destination.Bech32String(hrp)
+		if err != nil {
+			return "", nil
+		}
+		msg := models.CashSendMsgAdapter{
+			Source:      source,
+			Destination: dest,
+			Amount:      message.Amount,
+			Memo:        message.Memo,
+		}
+		details, err := json.Marshal(msg)
+		if err != nil {
+			return "", err
+		}
+
+		res, err := json.Marshal(
+			models.Message{
+				Path:      message.Path(),
+				Details:   json.RawMessage(details),
+				Multisigs: multisigstr,
+			})
 		return string(res), err
 	default:
 		details, err := json.Marshal(message)
@@ -183,9 +215,11 @@ func messageDetails(msg weave.Msg) (string, error) {
 		}
 
 		res, err := json.Marshal(
-			Message{
-				Path:    message.Path(),
-				Details: string(details)})
+			models.Message{
+				Path:      message.Path(),
+				Details:   json.RawMessage(details),
+				Multisigs: multisigstr,
+			})
 		return string(res), err
 	}
 }
@@ -195,10 +229,10 @@ func messageDetails(msg weave.Msg) (string, error) {
 type validatorsCache struct {
 	cache map[string]int64
 	tmc   *TendermintClient
-	st    *Store
+	st    *store.Store
 }
 
-func newValidatorsCache(tmc *TendermintClient, st *Store) *validatorsCache {
+func newValidatorsCache(tmc *TendermintClient, st *store.Store) *validatorsCache {
 	return &validatorsCache{
 		cache: make(map[string]int64),
 		tmc:   tmc,
@@ -229,14 +263,14 @@ func (vc *validatorsCache) DatabaseID(ctx context.Context, address []byte, block
 	}
 
 	if len(address) == 0 {
-		return 0, errors.Wrap(ErrNotFound, "empty validator address")
+		return 0, errors.Wrap(errors.ErrNotFound, "empty validator address")
 	}
 
 	switch id, err := vc.st.ValidatorAddressID(ctx, address); {
 	case err == nil:
 		vc.cache[string(address)] = id
 		return id, nil
-	case ErrNotFound.Is(err):
+	case errors.ErrNotFound.Is(err):
 		// Not in the database yet.
 	default:
 		return 0, errors.Wrap(err, "query validator ID")
@@ -259,11 +293,11 @@ func (vc *validatorsCache) DatabaseID(ctx context.Context, address []byte, block
 		vc.cache[string(address)] = id
 		return id, nil
 	}
-	return 0, errors.Wrapf(ErrNotFound, "validator %x not present at height %d", address, blockHeight)
+	return 0, errors.Wrapf(errors.ErrNotFound, "validator %x not present at height %d", address, blockHeight)
 }
 
 // StreamSync is expected to work similar to Sync but to use websocket and
 // never quit unless context was cancelled.
 func StreamSync(ctx context.Context) error {
-	return errors.New("not implemented")
+	return ErrNotImplemented
 }

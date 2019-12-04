@@ -6,14 +6,18 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/iov-one/block-metrics/pkg/errors"
+	"github.com/iov-one/block-metrics/pkg/config"
 	"github.com/iov-one/block-metrics/pkg/metrics"
+	"github.com/iov-one/block-metrics/pkg/store"
+
+	"github.com/iov-one/weave/errors"
 )
 
 func main() {
-	conf := configuration{
-		PostgresURI:     env("POSTGRES_URI", "user=postgres dbname=postgres sslmode=disable"),
-		TendermintWsURI: env("TENDERMINT_WS_URI", "ws://localhost:26657/websocket"),
+	conf := config.Configuration{
+		PostgresURI:     os.Getenv("DATABASE_URL"),
+		TendermintWsURI: os.Getenv("TENDERMINT_WS_URI"),
+		Hrp:             os.Getenv("HRP"),
 	}
 
 	if err := run(conf); err != nil {
@@ -22,19 +26,7 @@ func main() {
 	}
 }
 
-func env(name, fallback string) string {
-	if v, ok := os.LookupEnv(name); ok {
-		return v
-	}
-	return fallback
-}
-
-type configuration struct {
-	PostgresURI     string
-	TendermintWsURI string
-}
-
-func run(conf configuration) error {
+func run(conf config.Configuration) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -44,11 +36,11 @@ func run(conf configuration) error {
 	}
 	defer db.Close()
 
-	if err := metrics.EnsureSchema(db); err != nil {
+	if err := store.EnsureSchema(db); err != nil {
 		return fmt.Errorf("ensure schema: %s", err)
 	}
 
-	st := metrics.NewStore(db)
+	st := store.NewStore(db)
 
 	tmc, err := metrics.DialTendermint(conf.TendermintWsURI)
 	if err != nil {
@@ -56,7 +48,7 @@ func run(conf configuration) error {
 	}
 	defer tmc.Close()
 
-	inserted, err := metrics.Sync(ctx, tmc, st)
+	inserted, err := metrics.Sync(ctx, tmc, st, conf.Hrp)
 	if err != nil {
 		return errors.Wrap(err, "sync")
 	}
