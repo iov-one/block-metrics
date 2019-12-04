@@ -189,7 +189,7 @@ func TestLastNBlock(t *testing.T) {
 
 	s := NewStore(db)
 
-	if _, err := s.LastNBlock(ctx, 1); !errors.ErrNotFound.Is(err) {
+	if _, err := s.LastNBlock(ctx, 1, 0); !errors.ErrNotFound.Is(err) {
 		t.Fatalf("want ErrNotFound, got %q", err)
 	}
 
@@ -217,7 +217,7 @@ func TestLastNBlock(t *testing.T) {
 		blocks = append(blocks, &block)
 	}
 
-	got, err := s.LastNBlock(ctx, 5)
+	got, err := s.LastNBlock(ctx, 5, 0)
 	assert.Nil(t, err)
 
 	for i, g := range got {
@@ -229,7 +229,7 @@ func TestLastNBlock(t *testing.T) {
 		}
 	}
 
-	_, err = s.LastNBlock(ctx, 101)
+	_, err = s.LastNBlock(ctx, 101, 0)
 	if !ErrLimit.Is(err) {
 		t.Fatalf("unexpected error: %s", err)
 	}
