@@ -3,14 +3,57 @@ language: go
 os:
 - linux
 
+langugage: go
+
 addons:
   postgresql: "10"
+  apt:
+    packages:
+      - docker-ce
 
 services:
 - postgresql
+- docker
+
+cache:
+  directories:
+    - $HOME/.cache/go-build
+    - $HOME/gopath/pkg/mod
 
 go:
-- tip
+- "1.13"
+
+env:
+  global:
+    - MAIN_GO_VERSION=1.13
+    - BUILD_VERSION=$(echo ${TRAVIS_COMMIT} | cut -c 1-10)
+    - VERSION=$(git describe --tags --abbrev=9 | sed 's/^v//')
+    - COMMIT=$(git log -1 --format='%H')
+    - IMAGE_NAME="iov1/block-metrics:${BUILD_VERSION}"
+
+
+script:
+  - set -eo pipefail
+  - make install;
+  - printenv TRAVIS_COMMIT_MESSAGE > commit.msg
+  - if [[ "$TRAVIS_GO_VERSION" == "$MAIN_GO_VERSION" && "$TRAVIS_OS_NAME" == "linux" ]]; then
+      release_latest=$( [[ "$TRAVIS_BRANCH" == "master" && "$TRAVIS_TAG" == "" && "$TRAVIS_PULL_REQUEST_BRANCH" == "" ]] && echo "yes" || echo "no" );
+      release_tag=$( [[ "$TRAVIS_TAG" != "" ]] && echo "yes" || echo "no" );
+
+      if [[ $release_latest == "yes" ]]; then
+        docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD";
+        docker tag  "iov1/block-metrics:${BUILD_VERSION}" "iov1/block-metrics:latest" ;
+        docker push "iov1/block-metrics:latest";
+        docker logout;
+      fi;
+
+      if [[ $release_tag == "yes" ]]; then
+        docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD";
+        docker tag  "iov1/block-metrics:${BUILD_VERSION}" "iov1/block-metrics:$TRAVIS_TAG" ;
+        docker push "iov1/block-metrics:$TRAVIS_TAG";
+        docker logout;
+      fi;
+    fi;
 
 notifications:
   email: false
