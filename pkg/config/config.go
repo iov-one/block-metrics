@@ -7,7 +7,4 @@ type Configuration struct {
 	TendermintWsURI string
 	// Derivation path: "tiov" or "iov"
 	Hrp string
-	// Allowed origins for CORS
-	AllowedOrigins string
-	Port           string
 }
