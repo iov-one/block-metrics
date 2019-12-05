@@ -12,8 +12,9 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/iov-one/block-metrics/pkg/errors"
+
 	bnsd "github.com/iov-one/weave/cmd/bnsd/app"
+	"github.com/iov-one/weave/errors"
 )
 
 type TendermintClient struct {
@@ -129,10 +130,6 @@ type jsonrpcResponse struct {
 		Message string
 	}
 }
-
-var (
-	ErrFailedResponse = errors.New("failed response")
-)
 
 // AbciInfo returns abci_info.
 func AbciInfo(c *TendermintClient) (*ABCIInfo, error) {
