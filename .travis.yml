@@ -39,6 +39,10 @@ script:
       release_latest=$( [[ "$TRAVIS_BRANCH" == "master" && "$TRAVIS_TAG" == "" && "$TRAVIS_PULL_REQUEST_BRANCH" == "" ]] && echo "yes" || echo "no" );
       release_tag=$( [[ "$TRAVIS_TAG" != "" ]] && echo "yes" || echo "no" );
 
+      if [[ $release_latest == "yes" || $release_tag == "yes" ]]; then
+        docker build --pull --file . --tag ${IMAGE_NAME} . ;
+      fi;
+
       if [[ $release_latest == "yes" ]]; then
         docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD";
         docker tag  "iov1/block-metrics:${BUILD_VERSION}" "iov1/block-metrics:latest" ;
