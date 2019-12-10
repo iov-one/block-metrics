@@ -40,7 +40,7 @@ script:
       release_tag=$( [[ "$TRAVIS_TAG" != "" ]] && echo "yes" || echo "no" );
 
       if [[ $release_latest == "yes" || $release_tag == "yes" ]]; then
-        docker build --pull --file . --tag ${IMAGE_NAME} . ;
+        docker build --pull --tag ${IMAGE_NAME} . ;
       fi;
 
       if [[ $release_latest == "yes" ]]; then
