@@ -31,7 +31,6 @@ env:
     - COMMIT=$(git log -1 --format='%H')
     - IMAGE_NAME="iov1/block-metrics:${BUILD_VERSION}"
 
-
 script:
   - set -eo pipefail
   - make install;
