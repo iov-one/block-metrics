@@ -3,8 +3,6 @@ language: go
 os:
 - linux
 
-langugage: go
-
 addons:
   postgresql: "10"
   apt:
