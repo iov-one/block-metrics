@@ -194,6 +194,53 @@ func (s *Store) LastNBlock(ctx context.Context, limit, after int) ([]*models.Blo
 	return blocks, nil
 }
 
+// LoadTxsWithMessages returns the txs with given messages.
+// ErrNotFound is returned if no blocks exist.
+// Note that it doesn't load the validators by default
+func (s *Store) LoadTxsWithMessages(ctx context.Context, messages []string) ([]*models.Transaction, error) {
+	var rows *sql.Rows
+	var err error
+	rows, err = s.db.QueryContext(ctx, `
+		SELECT transaction_hash, block_id, message
+		FROM transactions
+	`)
+	defer rows.Close()
+
+	if err != nil {
+		err = castPgErr(err)
+		if errors.ErrNotFound.Is(err) {
+			return nil, errors.Wrap(err, "no txs")
+		}
+		return nil, errors.Wrap(castPgErr(err), "cannot select tx")
+	}
+
+	var txs []*models.Transaction
+	for rows.Next() {
+		var tx models.Transaction
+		err := rows.Scan(&tx.Hash, &tx.BlockID, &tx.Message)
+		if err != nil {
+			err = castPgErr(err)
+			if errors.ErrNotFound.Is(err) {
+				return nil, errors.Wrap(err, "no tx")
+			}
+			return nil, errors.Wrap(castPgErr(err), "cannot select tx")
+		}
+
+		for _, m := range messages {
+			t, err := tx.Message.MarshalJSON()
+			if err != nil {
+				return nil, errors.Wrap(err, "cannot unmarshall json")
+			}
+			ms := string(t)
+			if strings.Contains(ms, m) {
+				txs = append(txs, &tx)
+			}
+		}
+	}
+
+	return txs, nil
+}
+
 func (s *Store) validatorNameFromProposerID(ctx context.Context, proposerID int64) (string, error) {
 	var vadr []byte
 	err := s.db.QueryRowContext(ctx, `
