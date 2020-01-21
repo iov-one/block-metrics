@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/iov-one/block-metrics/pkg/config"
@@ -15,14 +16,17 @@ import (
 
 func main() {
 	conf := config.Configuration{
-		PostgresURI:     os.Getenv("DATABASE_URL"),
+		DBHost:          os.Getenv("DATABASE_HOST"),
+		DBName:          os.Getenv("DATABASE_NAME"),
+		DBUser:          os.Getenv("DATABASE_USER"),
+		DBPass:          os.Getenv("DATABASE_PASS"),
+		DBSSL:           os.Getenv("DATABASE_SSL_ENABLE"),
 		TendermintWsURI: os.Getenv("TENDERMINT_WS_URI"),
 		Hrp:             os.Getenv("HRP"),
 	}
 
 	if err := run(conf); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(2)
+		log.Fatal(err)
 	}
 }
 
@@ -30,7 +34,9 @@ func run(conf config.Configuration) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	db, err := sql.Open("postgres", conf.PostgresURI)
+	dbUri := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=%s", conf.DBUser, conf.DBPass,
+		conf.DBHost, conf.DBName, conf.DBSSL)
+	db, err := sql.Open("postgres", dbUri)
 	if err != nil {
 		return fmt.Errorf("cannot connect to postgres: %s", err)
 	}

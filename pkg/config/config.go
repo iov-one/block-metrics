@@ -1,8 +1,11 @@
 package config
 
 type Configuration struct {
-	// Postgres URI
-	PostgresURI string
+	DBHost string
+	DBUser string
+	DBPass string
+	DBName string
+	DBSSL  string
 	// Tendermint websocket URI
 	TendermintWsURI string
 	// Derivation path: "tiov" or "iov"
