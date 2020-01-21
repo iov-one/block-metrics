@@ -16,11 +16,11 @@ import (
 
 func main() {
 	conf := config.Configuration{
-		DBHost:          os.Getenv("DATABASE_HOST"),
-		DBName:          os.Getenv("DATABASE_NAME"),
-		DBUser:          os.Getenv("DATABASE_USER"),
-		DBPass:          os.Getenv("DATABASE_PASS"),
-		DBSSL:           os.Getenv("DATABASE_SSL_ENABLE"),
+		DBHost:          os.Getenv("POSTGRES_HOST"),
+		DBName:          os.Getenv("POSTGRES_DB_NAME"),
+		DBUser:          os.Getenv("POSTGRES_USER"),
+		DBPass:          os.Getenv("POSTGRES_PASSWORD"),
+		DBSSL:           os.Getenv("POSTGRES_SSL_ENABLE"),
 		TendermintWsURI: os.Getenv("TENDERMINT_WS_URI"),
 		Hrp:             os.Getenv("HRP"),
 	}
