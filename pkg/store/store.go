@@ -486,6 +486,45 @@ func (s *Store) LoadTxsBySourceAndDest(ctx context.Context, source, dest string)
 	return txs, nil
 }
 
+// LoadTxsByMemo
+func (s *Store) LoadTxsByMemo(ctx context.Context, memo string) ([]models.Transaction, error) {
+	rows, err := s.db.QueryContext(ctx, `
+			SELECT transaction_hash, block_id, message
+			FROM transactions
+			AND message -> 'details' ->> 'memo' = $1
+		`, memo)
+	defer rows.Close()
+
+	if err != nil {
+		err = castPgErr(err)
+		if errors.ErrNotFound.Is(err) {
+			return nil, errors.Wrap(err, "no txs")
+		}
+		return nil, errors.Wrap(castPgErr(err), "cannot select txs")
+	}
+
+	var txs []models.Transaction
+
+	for rows.Next() {
+		var tx models.Transaction
+		err := rows.Scan(&tx.Hash, &tx.BlockID, &tx.Message)
+		if err != nil {
+			err = castPgErr(err)
+			if errors.ErrNotFound.Is(err) {
+				return nil, errors.Wrap(err, "no tx")
+			}
+			return nil, errors.Wrap(castPgErr(err), "cannot select tx")
+		}
+		txs = append(txs, tx)
+	}
+
+	if len(txs) == 0 {
+		return nil, errors.Wrap(errors.ErrNotFound, "no txs")
+	}
+
+	return txs, nil
+}
+
 // loadParticipants will load the participants for the given block and update the structure.
 // Automatically called as part of Load/LatestBlock to give you the full info
 func (s *Store) loadParticipants(ctx context.Context, blockHeight int64) (participants []int64, missing []int64, err error) {
