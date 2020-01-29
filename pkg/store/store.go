@@ -424,6 +424,68 @@ func (s *Store) LoadTxsInBlock(ctx context.Context, blockHeight int64) ([]models
 	return txs, nil
 }
 
+// LoadTxsBySourceAndDest
+func (s *Store) LoadTxsBySourceAndDest(ctx context.Context, source, dest string) ([]models.Transaction, error) {
+	var rows *sql.Rows
+	var err error
+	switch {
+	case source == "" && dest == "":
+		return nil, errors.Wrap(errors.ErrInput, "source and destination empty")
+	case source == "" && dest != "":
+		rows, err = s.db.QueryContext(ctx, `
+			SELECT transaction_hash, block_id, message
+			FROM transactions
+			WHERE message ->> 'path' = 'cash/send' 
+			AND message -> 'details' ->> 'destination' = $1
+		`, dest)
+	case source != "" && dest == "":
+		rows, err = s.db.QueryContext(ctx, `
+			SELECT transaction_hash, block_id, message
+			FROM transactions
+			WHERE message ->> 'path' = 'cash/send' 
+			AND message -> 'details' ->> 'source' = $1
+		`, source)
+	case source != "" && dest != "":
+		rows, err = s.db.QueryContext(ctx, `
+			SELECT transaction_hash, block_id, message
+			FROM transactions
+			WHERE message ->> 'path' = 'cash/send' 
+			AND message -> 'details' ->> 'source' = $1
+			AND message -> 'details' ->> 'destination' = $2
+		`, source, dest)
+	}
+	defer rows.Close()
+
+	if err != nil {
+		err = castPgErr(err)
+		if errors.ErrNotFound.Is(err) {
+			return nil, errors.Wrap(err, "no txs")
+		}
+		return nil, errors.Wrap(castPgErr(err), "cannot select txs")
+	}
+
+	var txs []models.Transaction
+
+	for rows.Next() {
+		var tx models.Transaction
+		err := rows.Scan(&tx.Hash, &tx.BlockID, &tx.Message)
+		if err != nil {
+			err = castPgErr(err)
+			if errors.ErrNotFound.Is(err) {
+				return nil, errors.Wrap(err, "no tx")
+			}
+			return nil, errors.Wrap(castPgErr(err), "cannot select tx")
+		}
+		txs = append(txs, tx)
+	}
+
+	if len(txs) == 0 {
+		return nil, errors.Wrap(errors.ErrNotFound, "no txs")
+	}
+
+	return txs, nil
+}
+
 // loadParticipants will load the participants for the given block and update the structure.
 // Automatically called as part of Load/LatestBlock to give you the full info
 func (s *Store) loadParticipants(ctx context.Context, blockHeight int64) (participants []int64, missing []int64, err error) {
