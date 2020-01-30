@@ -424,37 +424,14 @@ func (s *Store) LoadTxsInBlock(ctx context.Context, blockHeight int64) ([]models
 	return txs, nil
 }
 
-// LoadTxsBySourceAndDest
-func (s *Store) LoadTxsBySourceAndDest(ctx context.Context, source, dest string) ([]models.Transaction, error) {
-	var rows *sql.Rows
-	var err error
-	switch {
-	case source == "" && dest == "":
-		return nil, errors.Wrap(errors.ErrInput, "source and destination empty")
-	case source == "" && dest != "":
-		rows, err = s.db.QueryContext(ctx, `
-			SELECT transaction_hash, block_id, message
-			FROM transactions
-			WHERE message ->> 'path' = 'cash/send' 
-			AND message -> 'details' ->> 'destination' = $1
-		`, dest)
-	case source != "" && dest == "":
-		rows, err = s.db.QueryContext(ctx, `
-			SELECT transaction_hash, block_id, message
-			FROM transactions
-			WHERE message ->> 'path' = 'cash/send' 
-			AND message -> 'details' ->> 'source' = $1
-		`, source)
-	case source != "" && dest != "":
-		rows, err = s.db.QueryContext(ctx, `
-			SELECT transaction_hash, block_id, message
-			FROM transactions
-			WHERE message ->> 'path' = 'cash/send' 
-			AND message -> 'details' ->> 'source' = $1
-			AND message -> 'details' ->> 'destination' = $2
-		`, source, dest)
-	}
-	defer rows.Close()
+func (s *Store) LoadTxsByParams(ctx context.Context, source, dest, memo string) ([]models.Transaction, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT transaction_hash, block_id, message
+		FROM transactions
+		WHERE (message->'details'->>'source' = $1 OR true)
+		AND (message->'details'->>'destination' = $2 OR true)
+		AND (message->'details'->>'memo' = $3 OR true)
+		LIMIT 100`, source, dest, memo)
 
 	if err != nil {
 		err = castPgErr(err)
