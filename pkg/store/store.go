@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/hex"
-	"fmt"
 	"strings"
 
 	"github.com/lib/pq"
@@ -426,23 +425,13 @@ func (s *Store) LoadTxsInBlock(ctx context.Context, blockHeight int64) ([]models
 }
 
 func (s *Store) LoadTxsByParams(ctx context.Context, source, dest, memo string) ([]models.Transaction, error) {
-	if source == "" && dest == "" && memo == "" {
-		return nil, errors.Wrap(errors.ErrInput, "no input provided")
-	}
-
-	query := "SELECT transaction_hash, block_id, message FROM transactions"
-	if source != "" {
-		query += fmt.Sprintf(` AND message -> 'details' ->> 'source' = %s`, source)
-	}
-	if dest != "" {
-		query += fmt.Sprintf(` AND message -> 'details' ->> 'destination' = %s`, dest)
-	}
-	if memo != "" {
-		query += fmt.Sprintf(` AND message -> 'details' ->> 'memo' = "%s"`, memo)
-	}
-
-	rows, err := s.db.QueryContext(ctx, query)
-	defer rows.Close()
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT transaction_hash, block_id, message
+		FROM transactions
+		WHERE (message->'details'->>'source' = $1 OR true)
+		AND (message->'details'->>'destination' = $2 OR true)
+		AND (message->'details'->>'memo' = $3 OR true)
+		LIMIT 100`, source, dest, memo)
 
 	if err != nil {
 		err = castPgErr(err)
