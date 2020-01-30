@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/hex"
+	"fmt"
 	"strings"
 
 	"github.com/lib/pq"
@@ -424,75 +425,23 @@ func (s *Store) LoadTxsInBlock(ctx context.Context, blockHeight int64) ([]models
 	return txs, nil
 }
 
-// LoadTxsBySourceAndDest
-func (s *Store) LoadTxsBySourceAndDest(ctx context.Context, source, dest string) ([]models.Transaction, error) {
-	var rows *sql.Rows
-	var err error
-	switch {
-	case source == "" && dest == "":
-		return nil, errors.Wrap(errors.ErrInput, "source and destination empty")
-	case source == "" && dest != "":
-		rows, err = s.db.QueryContext(ctx, `
-			SELECT transaction_hash, block_id, message
-			FROM transactions
-			WHERE message ->> 'path' = 'cash/send' 
-			AND message -> 'details' ->> 'destination' = $1
-		`, dest)
-	case source != "" && dest == "":
-		rows, err = s.db.QueryContext(ctx, `
-			SELECT transaction_hash, block_id, message
-			FROM transactions
-			WHERE message ->> 'path' = 'cash/send' 
-			AND message -> 'details' ->> 'source' = $1
-		`, source)
-	case source != "" && dest != "":
-		rows, err = s.db.QueryContext(ctx, `
-			SELECT transaction_hash, block_id, message
-			FROM transactions
-			WHERE message ->> 'path' = 'cash/send' 
-			AND message -> 'details' ->> 'source' = $1
-			AND message -> 'details' ->> 'destination' = $2
-		`, source, dest)
-	}
-	defer rows.Close()
-
-	if err != nil {
-		err = castPgErr(err)
-		if errors.ErrNotFound.Is(err) {
-			return nil, errors.Wrap(err, "no txs")
-		}
-		return nil, errors.Wrap(castPgErr(err), "cannot select txs")
+func (s *Store) LoadTxsByParams(ctx context.Context, source, dest, memo string) ([]models.Transaction, error) {
+	if source == "" && dest == "" && memo == "" {
+		return nil, errors.Wrap(errors.ErrInput, "no input provided")
 	}
 
-	var txs []models.Transaction
-
-	for rows.Next() {
-		var tx models.Transaction
-		err := rows.Scan(&tx.Hash, &tx.BlockID, &tx.Message)
-		if err != nil {
-			err = castPgErr(err)
-			if errors.ErrNotFound.Is(err) {
-				return nil, errors.Wrap(err, "no tx")
-			}
-			return nil, errors.Wrap(castPgErr(err), "cannot select tx")
-		}
-		txs = append(txs, tx)
+	query := "SELECT transaction_hash, block_id, message FROM transactions"
+	if source != "" {
+		query += fmt.Sprintf(` AND message -> 'details' ->> 'source' = %s`, source)
+	}
+	if dest != "" {
+		query += fmt.Sprintf(` AND message -> 'details' ->> 'destination' = %s`, dest)
+	}
+	if memo != "" {
+		query += fmt.Sprintf(` AND message -> 'details' ->> 'memo' = "%s"`, memo)
 	}
 
-	if len(txs) == 0 {
-		return nil, errors.Wrap(errors.ErrNotFound, "no txs")
-	}
-
-	return txs, nil
-}
-
-// LoadTxsByMemo
-func (s *Store) LoadTxsByMemo(ctx context.Context, memo string) ([]models.Transaction, error) {
-	rows, err := s.db.QueryContext(ctx, `
-			SELECT transaction_hash, block_id, message
-			FROM transactions
-			AND message -> 'details' ->> 'memo' = $1
-		`, memo)
+	rows, err := s.db.QueryContext(ctx, query)
 	defer rows.Close()
 
 	if err != nil {
