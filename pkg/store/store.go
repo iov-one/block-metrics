@@ -8,6 +8,7 @@ import (
 
 	"github.com/lib/pq"
 
+	sq "github.com/Masterminds/squirrel"
 	"github.com/iov-one/block-metrics/pkg/models"
 	"github.com/iov-one/weave/errors"
 )
@@ -425,14 +426,20 @@ func (s *Store) LoadTxsInBlock(ctx context.Context, blockHeight int64) ([]models
 }
 
 func (s *Store) LoadTxsByParams(ctx context.Context, source, dest, memo string) ([]models.Transaction, error) {
-	rows, err := s.db.QueryContext(ctx, `
-		SELECT transaction_hash, block_id, message
-		FROM transactions
-		WHERE (message->'details'->>'source' = $1 OR true)
-		AND (message->'details'->>'destination' = $2 OR true)
-		AND (message->'details'->>'memo' = $3 OR true)
-		LIMIT 100`, source, dest, memo)
+	psql := sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
+	query := psql.Select("transaction_hash, block_id, message").From("transactions").Limit(100)
 
+	if source != "" {
+		query = query.Where("message->'details'->>'source' = ?", source)
+	}
+	if dest != "" {
+		query = query.Where("message->'details'->>'destination' = ?", dest)
+	}
+	if memo != "" {
+		query = query.Where("message->'details'->>'memo' = ?", memo)
+	}
+
+	rows, err := query.RunWith(s.db).QueryContext(ctx)
 	if err != nil {
 		err = castPgErr(err)
 		if errors.ErrNotFound.Is(err) {
