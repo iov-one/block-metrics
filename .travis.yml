@@ -48,7 +48,7 @@ script:
       fi;
 
       if [[ $release_tag == "yes" ]]; then
-        docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD";
+        echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
         docker tag  "iov1/block-metrics:${BUILD_VERSION}" "iov1/block-metrics:$TRAVIS_TAG" ;
         docker push "iov1/block-metrics:$TRAVIS_TAG";
         docker logout;
