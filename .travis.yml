@@ -23,6 +23,7 @@ go:
 
 env:
   global:
+    - GO111MODULE=on
     - MAIN_GO_VERSION=1.13
     - BUILD_VERSION=$(echo ${TRAVIS_COMMIT} | cut -c 1-10)
     - VERSION=$(git describe --tags --abbrev=9 | sed 's/^v//')
@@ -60,4 +61,5 @@ notifications:
 branches:
   only:
   - master
+  - /^v[0-9]+\.[0-9]+\.x$/
   - /^v[0-9]+\.[0-9]+\.[0-9]+$/
