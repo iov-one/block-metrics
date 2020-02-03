@@ -42,7 +42,7 @@ script:
       fi;
 
       if [[ $release_latest == "yes" ]]; then
-        echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin; docker tag  "iov1/block-metrics:${BUILD_VERSION}" "iov1/bnsd:latest"; docker push "iov1/block-metrics:latest";
+        echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin; docker tag  "iov1/block-metrics:${BUILD_VERSION}" "iov1/block-metrics:latest"; docker push "iov1/block-metrics:latest";
         docker logout;
       fi;
 
