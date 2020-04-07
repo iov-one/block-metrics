@@ -6,6 +6,8 @@ import (
 	"encoding/hex"
 	"strings"
 
+	"github.com/iov-one/weave/cmd/bnsd/x/account"
+
 	"github.com/lib/pq"
 
 	sq "github.com/Masterminds/squirrel"
@@ -114,6 +116,41 @@ func (s *Store) InsertBlock(ctx context.Context, b models.Block) error {
 	_ = tx.Rollback()
 
 	return wrapPgErr(err, "commit block tx")
+}
+
+func (s *Store) InsertAccount(ctx context.Context, a *account.RegisterAccountMsg) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return errors.Wrap(err, "cannot create transaction")
+	}
+
+	acc, err := tx.ExecContext(ctx, `
+		INSERT INTO accounts(domain, name, owner, broker)
+		VALUES ($1, $2, $3, $4)
+	`, a.Domain, a.Name, a.Owner.String(), a.Broker.String())
+	if err != nil {
+		return wrapPgErr(err, "insert account")
+	}
+
+	accountID, err := acc.LastInsertId()
+	if err != nil {
+		return wrapPgErr(err, "last insert id")
+	}
+	for _, target := range a.Targets {
+		_, err = tx.ExecContext(ctx, `
+		INSERT INTO account_targets (account_id, blockchain_id, address)
+		VALUES ($1, $2, $3)
+		`, accountID, target.BlockchainID, target.Address)
+		if err != nil {
+			return wrapPgErr(err, "insert account targets")
+		}
+	}
+
+	err = tx.Commit()
+
+	_ = tx.Rollback()
+
+	return wrapPgErr(err, "commit account")
 }
 
 // LoadLastNBlock returns the last blocks with given count.

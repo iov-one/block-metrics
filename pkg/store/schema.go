@@ -71,6 +71,23 @@ CREATE TABLE IF NOT EXISTS transactions (
 
 CREATE INDEX ON transactions (transaction_hash);
 ---
+
+CREATE TABLE IF NOT EXISTS accounts(
+	id BIGSERIAL PRIMARY KEY,
+	domain TEXT NOT NULL,
+	name TEXT NOT NULL,
+	owner TEXT NOT NULL,
+	broker TEXT	
+);
+---
+
+CREATE TABLE IF NOT EXISTS account_targets(
+	id BIGSERIAL PRIMARY KEY,
+	account_id BIGINT NOT NULL REFERENCES accounts(id),
+	blockhain_id TEXT NOT NULL,
+	address TEXT NOT NULL
+);
+---
 `
 
 type QueryError struct {

@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/iov-one/weave/cmd/bnsd/x/account"
+
 	"github.com/iov-one/block-metrics/pkg/models"
 	"github.com/iov-one/block-metrics/pkg/store"
 	"github.com/iov-one/weave"
@@ -121,6 +123,13 @@ func Sync(ctx context.Context, tmc *TendermintClient, st *store.Store, hrp strin
 			msg, err := tx.GetMsg()
 			if err != nil {
 				return inserted, errors.Wrap(err, "cannot get transaction message")
+			}
+			switch message := msg.(type) {
+			case *account.RegisterAccountMsg:
+				if err := st.InsertAccount(ctx, message); err != nil {
+					return inserted, errors.Wrapf(err, "insert account message %d", c.Height)
+
+				}
 			}
 			messages = append(messages, msg.Path())
 			msgDetails, err := messageDetails(msg, hrp, tx.Multisig)
