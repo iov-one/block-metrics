@@ -124,18 +124,21 @@ func (s *Store) InsertAccount(ctx context.Context, a *account.RegisterAccountMsg
 		return errors.Wrap(err, "cannot create transaction")
 	}
 
-	acc, err := tx.ExecContext(ctx, `
-		INSERT INTO accounts(domain, name, owner, broker)
-		VALUES ($1, $2, $3, $4)
-	`, a.Domain, a.Name, a.Owner.String(), a.Broker.String())
+	query :=
+		`INSERT INTO accounts(domain, name, owner, broker)
+		  VALUES ($1, $2, $3, $4)
+  		  RETURNING id`
+	stmt, err := s.db.Prepare(query)
 	if err != nil {
+		return wrapPgErr(err, "insert account query")
+	}
+	defer stmt.Close()
+
+	var accountID int
+	if err := stmt.QueryRow(a.Domain, a.Name, a.Owner.String(), a.Broker.String()).Scan(&accountID); err != nil {
 		return wrapPgErr(err, "insert account")
 	}
 
-	accountID, err := acc.LastInsertId()
-	if err != nil {
-		return wrapPgErr(err, "last insert id")
-	}
 	for _, target := range a.Targets {
 		_, err = tx.ExecContext(ctx, `
 		INSERT INTO account_targets (account_id, blockchain_id, address)

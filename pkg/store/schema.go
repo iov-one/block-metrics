@@ -84,7 +84,7 @@ CREATE TABLE IF NOT EXISTS accounts(
 CREATE TABLE IF NOT EXISTS account_targets(
 	id BIGSERIAL PRIMARY KEY,
 	account_id BIGINT NOT NULL REFERENCES accounts(id),
-	blockhain_id TEXT NOT NULL,
+	blockchain_id TEXT NOT NULL,
 	address TEXT NOT NULL
 );
 ---
