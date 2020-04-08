@@ -4,7 +4,7 @@ os:
 - linux
 
 addons:
-  postgresql: "10"
+  postgresql: "12"
   apt:
     packages:
       - docker-ce
