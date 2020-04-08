@@ -44,8 +44,8 @@ script:
       if [[ $release_latest == "yes" ]]; then
         echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin;
         docker tag "iov1/block-metrics:${BUILD_VERSION}" "iov1/block-metrics:latest";
-        docker push "iov1/block-metrics:latest";
         docker tag "iov1/quick-block-explorer:${BUILD_VERSION}" "iov1/quick-block-explorer:latest";
+        docker push "iov1/block-metrics:latest";
         docker push "iov1/quick-block-explorer:latest";
         docker logout;
       fi;
@@ -53,8 +53,8 @@ script:
       if [[ $release_tag == "yes" ]]; then
         echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin;
         docker tag "iov1/block-metrics:${BUILD_VERSION}" "iov1/block-metrics:$TRAVIS_TAG";
-        docker push "iov1/block-metrics:$TRAVIS_TAG";
         docker tag "iov1/quick-block-explorer:${BUILD_VERSION}" "iov1/quick-block-explorer:$TRAVIS_TAG";
+        docker push "iov1/block-metrics:$TRAVIS_TAG";
         docker push "iov1/quick-block-explorer:$TRAVIS_TAG";
         docker logout;
       fi;

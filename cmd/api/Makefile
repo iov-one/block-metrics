@@ -3,8 +3,8 @@
 BUILD_VERSION ?= manual
 BUILD_FLAGS := -mod=readonly
 DOCKER_BUILD_FLAGS := -a -installsuffix cgo
-BUILDOUT ?= collector
-IMAGE_NAME = "iov1/block-metrics:${BUILD_VERSION}"
+BUILDOUT ?= api
+IMAGE_NAME = "iov1/quick-block-explorer:${BUILD_VERSION}"
 
 install:
 	go install .

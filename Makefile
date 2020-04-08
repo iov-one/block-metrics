@@ -3,7 +3,7 @@
 # make sure we turn on go modules
 export GO111MODULE := on
 
-TOOLS := cmd/collector
+TOOLS := cmd/collector cmd/api
 
 all: test install
 
