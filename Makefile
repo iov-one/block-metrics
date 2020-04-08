@@ -3,15 +3,19 @@
 # make sure we turn on go modules
 export GO111MODULE := on
 
+TOOLS := cmd/collector
+
 all: test install
 
 install:
-	go install ./cmd/collector
+	for ex in $(TOOLS); do cd $$ex && make install && cd -; done
 
 build:
-	cd cmd/collector && $(MAKE) build
+	for ex in $(TOOLS); do cd $$ex && make build && cd -; done
 
 test:
-	@# customd binary is required by some tests. In order to not skip them, ensure customd binary is provided and in the latest version.
 	go vet -mod=readonly ./...
 	go test -mod=readonly -race ./...
+
+dist:
+	for ex in $(TOOLS); do cd $$ex && make dist && cd -; done

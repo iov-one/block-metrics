@@ -28,7 +28,6 @@ env:
     - BUILD_VERSION=$(echo ${TRAVIS_COMMIT} | cut -c 1-10)
     - VERSION=$(git describe --tags --abbrev=9 | sed 's/^v//')
     - COMMIT=$(git log -1 --format='%H')
-    - IMAGE_NAME="iov1/block-metrics:${BUILD_VERSION}"
 
 script:
   - set -eo pipefail
@@ -39,16 +38,24 @@ script:
       release_tag=$( [[ "$TRAVIS_TAG" != "" ]] && echo "yes" || echo "no" );
 
       if [[ $release_latest == "yes" || $release_tag == "yes" ]]; then
-        docker build --pull --tag ${IMAGE_NAME} . ;
+        make dist
       fi;
 
       if [[ $release_latest == "yes" ]]; then
-        echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin; docker tag "iov1/block-metrics:${BUILD_VERSION}" "iov1/block-metrics:latest"; docker push "iov1/block-metrics:latest";
+        echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin;
+        docker tag "iov1/block-metrics:${BUILD_VERSION}" "iov1/block-metrics:latest";
+        docker push "iov1/block-metrics:latest";
+        docker tag "iov1/quick-block-explorer:${BUILD_VERSION}" "iov1/quick-block-explorer:latest";
+        docker push "iov1/quick-block-explorer:latest";
         docker logout;
       fi;
 
       if [[ $release_tag == "yes" ]]; then
-        echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin; docker tag "iov1/block-metrics:${BUILD_VERSION}" "iov1/block-metrics:$TRAVIS_TAG"; docker push "iov1/block-metrics:$TRAVIS_TAG";
+        echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin;
+        docker tag "iov1/block-metrics:${BUILD_VERSION}" "iov1/block-metrics:$TRAVIS_TAG";
+        docker push "iov1/block-metrics:$TRAVIS_TAG";
+        docker tag "iov1/quick-block-explorer:${BUILD_VERSION}" "iov1/quick-block-explorer:$TRAVIS_TAG";
+        docker push "iov1/quick-block-explorer:$TRAVIS_TAG";
         docker logout;
       fi;
     fi;
