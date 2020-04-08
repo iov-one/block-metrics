@@ -129,7 +129,7 @@ func prepareStore(t *testing.T, ctx context.Context) (s *store.Store, cleanup fu
 			Messages:       []string{"test/mymsg"},
 			Transactions:   txs,
 		}
-		if err := s.InsertBlock(ctx, block); err != nil {
+		if err := str.InsertBlock(ctx, block); err != nil {
 			t.Fatalf("cannot insert block: %s", err)
 		}
 	}
