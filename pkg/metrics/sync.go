@@ -130,6 +130,8 @@ func Sync(ctx context.Context, tmc *TendermintClient, st *store.Store, hrp strin
 					return inserted, errors.Wrapf(err, "insert account message %d", c.Height)
 
 				}
+			case *account.ReplaceAccountTargetsMsg:
+
 			}
 			messages = append(messages, msg.Path())
 			msgDetails, err := messageDetails(msg, hrp, tx.Multisig)
