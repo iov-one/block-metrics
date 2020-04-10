@@ -33,30 +33,30 @@ script:
   - set -eo pipefail
   - make all;
   - if [[ "$TRAVIS_GO_VERSION" == "$MAIN_GO_VERSION" && "$TRAVIS_OS_NAME" == "linux" ]]; then
-      release_latest=$( [[ "$TRAVIS_BRANCH" == "master" && "$TRAVIS_TAG" == "" && "$TRAVIS_PULL_REQUEST_BRANCH" == "" ]] && echo "yes" || echo "no" );
-      release_tag=$( [[ "$TRAVIS_TAG" != "" ]] && echo "yes" || echo "no" );
+    release_latest=$( [[ "$TRAVIS_BRANCH" == "master" && "$TRAVIS_TAG" == "" && "$TRAVIS_PULL_REQUEST_BRANCH" == "" ]] && echo "yes" || echo "no" );
+    release_tag=$( [[ "$TRAVIS_TAG" != "" ]] && echo "yes" || echo "no" );
 
-      if [[ $release_latest == "yes" || $release_tag == "yes" ]]; then
-        make dist
-      fi;
+    if [[ $release_latest == "yes" || $release_tag == "yes" ]]; then
+    make dist
+    fi;
 
-      if [[ $release_latest == "yes" ]]; then
-        echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin;
-        docker tag "iov1/block-metrics:${BUILD_VERSION}" "iov1/block-metrics:latest";
-        docker tag "iov1/quick-block-explorer:${BUILD_VERSION}" "iov1/quick-block-explorer:latest";
-        docker push "iov1/block-metrics:latest";
-        docker push "iov1/quick-block-explorer:latest";
-        docker logout;
-      fi;
+    if [[ $release_latest == "yes" ]]; then
+    echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin;
+    docker tag "iov1/block-metrics:${BUILD_VERSION}" "iov1/block-metrics:latest";
+    docker tag "iov1/quick-block-explorer:${BUILD_VERSION}" "iov1/quick-block-explorer:latest";
+    docker push "iov1/block-metrics:latest";
+    docker push "iov1/quick-block-explorer:latest";
+    docker logout;
+    fi;
 
-      if [[ $release_tag == "yes" ]]; then
-        echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin;
-        docker tag "iov1/block-metrics:${BUILD_VERSION}" "iov1/block-metrics:$TRAVIS_TAG";
-        docker tag "iov1/quick-block-explorer:${BUILD_VERSION}" "iov1/quick-block-explorer:$TRAVIS_TAG";
-        docker push "iov1/block-metrics:$TRAVIS_TAG";
-        docker push "iov1/quick-block-explorer:$TRAVIS_TAG";
-        docker logout;
-      fi;
+    if [[ $release_tag == "yes" ]]; then
+    echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin;
+    docker tag "iov1/block-metrics:${BUILD_VERSION}" "iov1/block-metrics:$TRAVIS_TAG";
+    docker tag "iov1/quick-block-explorer:${BUILD_VERSION}" "iov1/quick-block-explorer:$TRAVIS_TAG";
+    docker push "iov1/block-metrics:$TRAVIS_TAG";
+    docker push "iov1/quick-block-explorer:$TRAVIS_TAG";
+    docker logout;
+    fi;
     fi;
 
 notifications:
