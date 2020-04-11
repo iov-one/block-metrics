@@ -6,6 +6,8 @@ import (
 	"encoding/hex"
 	"strings"
 
+	"github.com/iov-one/weave/cmd/bnsd/x/account"
+
 	"github.com/lib/pq"
 
 	sq "github.com/Masterminds/squirrel"
@@ -114,6 +116,44 @@ func (s *Store) InsertBlock(ctx context.Context, b models.Block) error {
 	_ = tx.Rollback()
 
 	return wrapPgErr(err, "commit block tx")
+}
+
+func (s *Store) InsertAccount(ctx context.Context, a *account.RegisterAccountMsg) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return errors.Wrap(err, "cannot create transaction")
+	}
+
+	query :=
+		`INSERT INTO accounts(domain, name, owner, broker)
+		  VALUES ($1, $2, $3, $4)
+  		  RETURNING id`
+	stmt, err := s.db.Prepare(query)
+	if err != nil {
+		return wrapPgErr(err, "insert account query")
+	}
+	defer stmt.Close()
+
+	var accountID int
+	if err := stmt.QueryRow(a.Domain, a.Name, a.Owner.String(), a.Broker.String()).Scan(&accountID); err != nil {
+		return wrapPgErr(err, "insert account")
+	}
+
+	for _, target := range a.Targets {
+		_, err = tx.ExecContext(ctx, `
+		INSERT INTO account_targets (account_id, blockchain_id, address)
+		VALUES ($1, $2, $3)
+		`, accountID, target.BlockchainID, target.Address)
+		if err != nil {
+			return wrapPgErr(err, "insert account targets")
+		}
+	}
+
+	err = tx.Commit()
+
+	_ = tx.Rollback()
+
+	return wrapPgErr(err, "commit account")
 }
 
 // LoadLastNBlock returns the last blocks with given count.
@@ -539,4 +579,90 @@ func (s *Store) loadParticipants(ctx context.Context, blockHeight int64) (partic
 
 	err = wrapPgErr(rows.Err(), "scanning participants")
 	return
+}
+
+func (s *Store) ReplaceAccountTargets(ctx context.Context, a *account.ReplaceAccountTargetsMsg) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return errors.Wrap(err, "cannot create transaction")
+	}
+
+	var accountID int
+	if err := s.db.QueryRow(`SELECT id FROM accounts WHERE domain = $1 AND name = $2`, a.Domain, a.Name).Scan(&accountID); err != nil {
+		return wrapPgErr(err, "cannot get account ID")
+	}
+
+	if _, err := tx.ExecContext(ctx, `DELETE FROM account_targets WHERE account_id = $1`, accountID); err != nil {
+		return wrapPgErr(err, "update account delete query")
+
+	}
+
+	for _, target := range a.NewTargets {
+		_, err = tx.ExecContext(ctx, `
+		INSERT INTO account_targets (account_id, blockchain_id, address)
+		VALUES ($1, $2, $3)
+		`, accountID, target.BlockchainID, target.Address)
+		if err != nil {
+			return wrapPgErr(err, "insert account targets")
+		}
+	}
+
+	err = tx.Commit()
+
+	_ = tx.Rollback()
+
+	return wrapPgErr(err, "commit account")
+}
+
+func (s *Store) LoadAccount(ctx context.Context, name, domain string) (*models.Account, error) {
+	var acc models.Account
+
+	err := s.db.QueryRowContext(ctx, `
+		SELECT id, domain, name, owner, broker
+		FROM accounts
+		WHERE name=$1 AND domain=$2
+	`, name, domain).Scan(&acc.ID, &acc.Domain, &acc.Name, &acc.Owner, &acc.Broker)
+	if err != nil {
+		return nil, wrapPgErr(err, "cannot load account")
+	}
+	return &acc, nil
+}
+
+func (s *Store) LoadAccountTargets(ctx context.Context, name, domain string) ([]models.AccountTarget, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT account_targets.id, account_targets.account_id, account_targets.blockchain_id, account_targets.address
+		FROM account_targets
+		INNER JOIN accounts ON account_targets.account_id = accounts.id
+		AND accounts.name = $1 AND accounts.domain = $2
+	`, name, domain)
+	defer rows.Close()
+
+	if err != nil {
+		err = castPgErr(err)
+		if errors.ErrNotFound.Is(err) {
+			return nil, errors.Wrap(err, "no accounts")
+		}
+		return nil, errors.Wrap(err, "cannot select account_targets")
+	}
+
+	var accts []models.AccountTarget
+
+	for rows.Next() {
+		var acct models.AccountTarget
+		err := rows.Scan(&acct.ID, &acct.AccountID, &acct.BlockchainID, &acct.Address)
+		if err != nil {
+			err = castPgErr(err)
+			if errors.ErrNotFound.Is(err) {
+				return nil, errors.Wrap(err, "no account target")
+			}
+			return nil, errors.Wrap(castPgErr(err), "cannot select account target")
+		}
+		accts = append(accts, acct)
+	}
+
+	if len(accts) == 0 {
+		return nil, errors.Wrap(errors.ErrNotFound, "no account targets")
+	}
+
+	return accts, nil
 }
