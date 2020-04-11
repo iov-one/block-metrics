@@ -8,6 +8,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/iov-one/weave/cmd/bnsd/x/account"
+	"github.com/iov-one/weave/weavetest"
+
 	"github.com/iov-one/block-metrics/pkg/models"
 	"github.com/iov-one/weave/errors"
 	"github.com/iov-one/weave/weavetest/assert"
@@ -385,4 +388,80 @@ func TestStoreInsertBlock(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestStoreAccount(t *testing.T) {
+	db, cleanup := EnsureDB(t)
+	defer cleanup()
+
+	ctx := context.Background()
+
+	s := NewStore(db)
+
+	targets := []account.BlockchainAddress{
+		{
+			BlockchainID: "cosmos",
+			Address:      "test",
+		},
+		{
+			BlockchainID: "cosmos1",
+			Address:      "test1",
+		},
+	}
+	msg := account.RegisterAccountMsg{
+		Domain:  "domain",
+		Name:    "name",
+		Owner:   weavetest.NewCondition().Address(),
+		Targets: targets,
+	}
+
+	if err := s.InsertAccount(ctx, &msg); err != nil {
+		t.Fatalf("cannot insert account: %s", err)
+	}
+
+	acc, err := s.LoadAccount(ctx, "name", "domain")
+	if err != nil {
+		t.Fatalf("cannot load account: %s", err)
+	}
+
+	if acc.Domain != msg.Domain || acc.Name != msg.Name || acc.Owner != msg.Owner.String() {
+		t.Logf("expected: %+v", msg)
+		t.Fatalf("got: %+v", acc)
+	}
+
+	accTargets, err := s.LoadAccountTargets(ctx, "name", "domain")
+	if err != nil {
+		t.Fatalf("cannot load account: %s", err)
+	}
+
+	t.Logf("sent account targets: %+v", targets)
+	t.Logf("got account targets: %+v", accTargets)
+
+	newTargets := []account.BlockchainAddress{
+		{
+			BlockchainID: "new",
+			Address:      "new",
+		},
+		{
+			BlockchainID: "new1",
+			Address:      "new1",
+		},
+	}
+	replaceMsg := account.ReplaceAccountTargetsMsg{
+		Domain:     "domain",
+		Name:       "name",
+		NewTargets: newTargets,
+	}
+	if err := s.ReplaceAccountTargets(ctx, &replaceMsg); err != nil {
+		t.Fatalf("cannot replace account: %s", err)
+	}
+
+	accTargets, err = s.LoadAccountTargets(ctx, "name", "domain")
+	if err != nil {
+		t.Fatalf("cannot load account: %s", err)
+	}
+
+	t.Logf("sent account targets: %+v", targets)
+	t.Logf("got account targets: %+v", accTargets)
+
 }
