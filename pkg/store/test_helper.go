@@ -22,6 +22,7 @@ import (
 //   * SSLMode: disable
 //   * User: postgres
 //
+//
 // Function connects to the 'postgres' database first to create a new database.
 func EnsureDB(t *testing.T) (testdb *sql.DB, cleanup func()) {
 	t.Helper()
