@@ -28,7 +28,6 @@ env:
     - COMMIT=$(git log -1 --format='%H')
 
 script:
-  - set -eo pipefail
   - make install
   - make all
   - if [[ "$TRAVIS_GO_VERSION" == "$MAIN_GO_VERSION" && "$TRAVIS_OS_NAME" == "linux" ]]; then
