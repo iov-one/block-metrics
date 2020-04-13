@@ -30,7 +30,7 @@ env:
     - COMMIT=$(git log -1 --format='%H')
 
 script:
-  - set -eo pipefail
+  - set -eov pipefail
   - make all;
   - if [[ "$TRAVIS_GO_VERSION" == "$MAIN_GO_VERSION" && "$TRAVIS_OS_NAME" == "linux" ]]; then
     release_latest=$( [[ "$TRAVIS_BRANCH" == "master" && "$TRAVIS_TAG" == "" && "$TRAVIS_PULL_REQUEST_BRANCH" == "" ]] && echo "yes" || echo "no" );
