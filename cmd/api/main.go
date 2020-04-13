@@ -36,10 +36,6 @@ func main() {
 	}
 	defer db.Close()
 
-	if err := store.EnsureSchema(db); err != nil {
-		panic(err)
-	}
-
 	a := app.App{}
 	st := store.NewStore(db)
 	a.Initialize(ctx, st)

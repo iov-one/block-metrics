@@ -23,6 +23,9 @@ func (a *App) Initialize(ctx context.Context, store *store.Store) {
 	a.Store = store
 
 	e := echo.New()
+	e.GET("/health", func(c echo.Context) error {
+		return c.String(http.StatusOK, "OK")
+	})
 	g := e.Group("/api")
 
 	blocksHandler := handlers.BlocksHandler{Store: store}
