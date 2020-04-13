@@ -5,7 +5,7 @@ export GO111MODULE := on
 
 TOOLS := cmd/collector cmd/api
 
-all: test lint
+all: test
 
 install:
 	for ex in $(TOOLS); do cd $$ex && make install && cd -; done
