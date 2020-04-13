@@ -17,12 +17,12 @@ cache:
     - $HOME/gopath/pkg/mod
 
 go:
-- "1.14"
+- "1.13"
 
 env:
   global:
     - GO111MODULE=on
-    - MAIN_GO_VERSION=1.14
+    - MAIN_GO_VERSION=1.13
     - BUILD_VERSION=$(echo ${TRAVIS_COMMIT} | cut -c 1-10)
     - VERSION=$(git describe --tags --abbrev=9 | sed 's/^v//')
     - COMMIT=$(git log -1 --format='%H')
