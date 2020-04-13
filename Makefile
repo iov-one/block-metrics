@@ -1,11 +1,11 @@
-.PHONY: all install test
+.PHONY: all install test lint
 
 # make sure we turn on go modules
 export GO111MODULE := on
 
 TOOLS := cmd/collector cmd/api
 
-all: test install
+all: test lint
 
 install:
 	for ex in $(TOOLS); do cd $$ex && make install && cd -; done
@@ -19,3 +19,8 @@ test:
 
 dist:
 	for ex in $(TOOLS); do cd $$ex && make dist && cd -; done
+
+lint:
+	@go mod vendor
+	docker run --rm -it -v $(shell pwd):/go/src/github.com/iov-one/block-metrics="/go/src/github.com/iov-one/block-metrics" golangci/golangci-lint:v1.17.1 golangci-lint run ./...
+	@rm -rf vendor
