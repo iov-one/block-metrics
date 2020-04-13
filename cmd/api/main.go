@@ -7,12 +7,14 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/iov-one/block-metrics/pkg/config"
+
 	"github.com/iov-one/block-metrics/cmd/api/app"
 	"github.com/iov-one/block-metrics/pkg/store"
 )
 
 func main() {
-	conf := Configuration{
+	conf := config.Configuration{
 		DBHost:         os.Getenv("POSTGRES_HOST"),
 		DBName:         os.Getenv("POSTGRES_DB_NAME"),
 		DBUser:         os.Getenv("POSTGRES_USER"),

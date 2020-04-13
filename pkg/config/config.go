@@ -9,5 +9,7 @@ type Configuration struct {
 	// Tendermint websocket URI
 	TendermintWsURI string
 	// Derivation path: "tiov" or "iov"
-	Hrp string
+	Hrp            string
+	AllowedOrigins string
+	Port           string
 }
