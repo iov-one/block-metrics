@@ -4,13 +4,11 @@ os:
 - linux
 
 addons:
-  postgresql: "12"
   apt:
     packages:
       - docker-ce
 
 services:
-- postgresql
 - docker
 
 cache:
