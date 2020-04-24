@@ -9,12 +9,17 @@ node address.
 
 ```sh
 # Run local Postgres instance
-$ docker run -it --rm -e POSTGRES_PASSWORD='' -p 5432:5432 postgres:alpine
+$ docker run -it --rm -e POSTGRES_HOST_AUTH_METHOD='trust' -p 5432:5432 postgres:alpine
 
 # Run collector. Default configuration is expected to work for local
 # development. If needed it can be changed via environment variables.
-$ TENDERMINT_WS_URI="wss://bns.hugnet.iov.one/websocket" \
-  POSTGRES_URI="host=localhost port=5432 user=name password=123 dbname=name sslmode=disable" \
+$ TENDERMINT_WS_URI="wss://rpc-private-a-vip-mainnet.iov.one/websocket" \
+  POSTGRES_HOST="localhost" \
+  POSTGRES_DB_NAME="postgres" \
+  POSTGRES_USER="postgres" \
+  POSTGRES_PASSWORD="" \
+  POSTGRES_SSL_ENABLE="disable" \
+  POSTGRES_PORT="5432" \
     go run cmd/collector/main.go
 ```
 
