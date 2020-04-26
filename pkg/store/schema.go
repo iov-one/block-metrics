@@ -88,6 +88,15 @@ CREATE TABLE IF NOT EXISTS account_targets(
 	address TEXT NOT NULL
 );
 ---
+
+
+CREATE TABLE IF NOT EXISTS username_targets(
+	id BIGSERIAL PRIMARY KEY,
+	name TEXT NOT NULL,
+	blockchain_id TEXT NOT NULL,
+	address TEXT NOT NULL
+);
+---
 `
 
 type QueryError struct {
