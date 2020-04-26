@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/iov-one/weave/cmd/bnsd/x/account"
+	"github.com/iov-one/weave/cmd/bnsd/x/username"
 
 	"github.com/iov-one/block-metrics/pkg/models"
 	"github.com/iov-one/block-metrics/pkg/store"
@@ -131,7 +132,17 @@ func Sync(ctx context.Context, tmc *TendermintClient, st *store.Store, hrp strin
 
 				}
 			case *account.ReplaceAccountTargetsMsg:
-
+				if err := st.ReplaceAccountTargets(ctx, message); err != nil {
+					return inserted, errors.Wrapf(err, "insert account message %d", c.Height)
+				}
+			case *username.RegisterTokenMsg:
+				if err := st.InsertUsername(ctx, message); err != nil {
+					return inserted, errors.Wrapf(err, "insert username message %d", c.Height)
+				}
+			case *username.ChangeTokenTargetsMsg:
+				if err := st.ReplaceUsernameTargets(ctx, message); err != nil {
+					return inserted, errors.Wrapf(err, "insert username message %d", c.Height)
+				}
 			}
 			messages = append(messages, msg.Path())
 			msgDetails, err := messageDetails(msg, hrp, tx.Multisig)
