@@ -89,13 +89,20 @@ CREATE TABLE IF NOT EXISTS account_targets(
 );
 ---
 
+CREATE TABLE IF NOT EXISTS usernames(
+	id BIGSERIAL PRIMARY KEY,
+	name TEXT NOT NULL
+);
+
+---
 
 CREATE TABLE IF NOT EXISTS username_targets(
 	id BIGSERIAL PRIMARY KEY,
-	name TEXT NOT NULL,
+	username_id BIGINT NOT NULL REFERENCES usernames(id),
 	blockchain_id TEXT NOT NULL,
 	address TEXT NOT NULL
 );
+
 ---
 `
 
