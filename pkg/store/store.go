@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/iov-one/weave/cmd/bnsd/x/account"
+	"github.com/iov-one/weave/cmd/bnsd/x/username"
 
 	"github.com/lib/pq"
 
@@ -146,6 +147,110 @@ func (s *Store) InsertAccount(ctx context.Context, a *account.RegisterAccountMsg
 		`, accountID, target.BlockchainID, target.Address)
 		if err != nil {
 			return wrapPgErr(err, "insert account targets")
+		}
+	}
+
+	err = tx.Commit()
+
+	_ = tx.Rollback()
+
+	return wrapPgErr(err, "commit account")
+}
+
+func (s *Store) ReplaceAccountTargets(ctx context.Context, a *account.ReplaceAccountTargetsMsg) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return errors.Wrap(err, "cannot create transaction")
+	}
+
+	var accountID int
+	if err := s.db.QueryRow(`SELECT id FROM accounts WHERE domain = $1 AND name = $2`, a.Domain, a.Name).Scan(&accountID); err != nil {
+		return wrapPgErr(err, "cannot get account ID")
+	}
+
+	if _, err := tx.ExecContext(ctx, `DELETE FROM account_targets WHERE account_id = $1`, accountID); err != nil {
+		return wrapPgErr(err, "update account delete query")
+
+	}
+
+	for _, target := range a.NewTargets {
+		_, err = tx.ExecContext(ctx, `
+		INSERT INTO account_targets (account_id, blockchain_id, address)
+		VALUES ($1, $2, $3)
+		`, accountID, target.BlockchainID, target.Address)
+		if err != nil {
+			return wrapPgErr(err, "insert account targets")
+		}
+	}
+
+	err = tx.Commit()
+
+	_ = tx.Rollback()
+
+	return wrapPgErr(err, "commit account")
+}
+
+func (s *Store) InsertUsername(ctx context.Context, a *username.RegisterTokenMsg) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return errors.Wrap(err, "cannot create transaction")
+	}
+
+	query :=
+		`INSERT INTO usernames(name)
+		  VALUES ($1)
+  		  RETURNING id`
+	stmt, err := s.db.Prepare(query)
+	if err != nil {
+		return wrapPgErr(err, "insert username query")
+	}
+	defer stmt.Close()
+
+	var usernameID int
+	if err := stmt.QueryRow(a.Username).Scan(&usernameID); err != nil {
+		return wrapPgErr(err, "insert account")
+	}
+
+	for _, target := range a.Targets {
+		_, err = tx.ExecContext(ctx, `
+			INSERT INTO username_targets (username_id, blockchain_id, address)
+			VALUES ($1, $2, $3)
+			`, usernameID, target.BlockchainID, target.Address)
+		if err != nil {
+			return wrapPgErr(err, "insert account targets")
+		}
+	}
+
+	err = tx.Commit()
+
+	_ = tx.Rollback()
+
+	return wrapPgErr(err, "commit account")
+}
+
+func (s *Store) ReplaceUsernameTargets(ctx context.Context, a *username.ChangeTokenTargetsMsg) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return errors.Wrap(err, "cannot create transaction")
+	}
+
+	var usernameID int
+	if err := s.db.QueryRow(`SELECT id FROM usernames WHERE name = $1`, a.Username).Scan(&usernameID); err != nil {
+		return wrapPgErr(err, "cannot get account ID")
+	}
+
+	if _, err := tx.ExecContext(ctx, `DELETE FROM username_targets WHERE username_id = $1`, usernameID); err != nil {
+		return wrapPgErr(err, "update username delete query")
+
+	}
+
+	for _, target := range a.NewTargets {
+		_, err = tx.ExecContext(ctx, `
+		INSERT INTO username_targets (username_id, blockchain_id, address)
+		VALUES ($1, $2, $3)
+		`, usernameID, target.BlockchainID, target.Address)
+		if err != nil {
+			return wrapPgErr(err, "insert username targets")
 		}
 	}
 
@@ -579,39 +684,6 @@ func (s *Store) loadParticipants(ctx context.Context, blockHeight int64) (partic
 
 	err = wrapPgErr(rows.Err(), "scanning participants")
 	return
-}
-
-func (s *Store) ReplaceAccountTargets(ctx context.Context, a *account.ReplaceAccountTargetsMsg) error {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return errors.Wrap(err, "cannot create transaction")
-	}
-
-	var accountID int
-	if err := s.db.QueryRow(`SELECT id FROM accounts WHERE domain = $1 AND name = $2`, a.Domain, a.Name).Scan(&accountID); err != nil {
-		return wrapPgErr(err, "cannot get account ID")
-	}
-
-	if _, err := tx.ExecContext(ctx, `DELETE FROM account_targets WHERE account_id = $1`, accountID); err != nil {
-		return wrapPgErr(err, "update account delete query")
-
-	}
-
-	for _, target := range a.NewTargets {
-		_, err = tx.ExecContext(ctx, `
-		INSERT INTO account_targets (account_id, blockchain_id, address)
-		VALUES ($1, $2, $3)
-		`, accountID, target.BlockchainID, target.Address)
-		if err != nil {
-			return wrapPgErr(err, "insert account targets")
-		}
-	}
-
-	err = tx.Commit()
-
-	_ = tx.Rollback()
-
-	return wrapPgErr(err, "commit account")
 }
 
 func (s *Store) LoadAccount(ctx context.Context, name, domain string) (*models.Account, error) {
