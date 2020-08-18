@@ -36,7 +36,7 @@ func EnsureDB(t *testing.T) (testdb *sql.DB, cleanup func()) {
 		DBName   string
 	}{
 		User:     utils.Env("POSTGRES_TEST_USER", "postgres"),
-		Password: utils.Env("POSTGRES_TEST_PASSWORD", "postgres"),
+		Password: utils.Env("POSTGRES_TEST_PASSWORD", ""),
 		Port:     utils.Env("POSTGRES_TEST_PORT", "5432"),
 		Host:     utils.Env("POSTGRES_TEST_HOST", "localhost"),
 		SSLMode:  utils.Env("POSTGRES_TEST_SSLMODE", "disable"),

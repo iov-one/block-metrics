@@ -1,2 +1,5 @@
-.postgres-data
 .envrc
+.env
+.docker-build
+vendor
+.postgres-data

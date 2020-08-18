@@ -7,8 +7,8 @@ import (
 	"log"
 	"os"
 
+	"github.com/iov-one/block-metrics/cmd/collector/metrics"
 	"github.com/iov-one/block-metrics/pkg/config"
-	"github.com/iov-one/block-metrics/pkg/metrics"
 	"github.com/iov-one/block-metrics/pkg/store"
 
 	"github.com/iov-one/weave/errors"
